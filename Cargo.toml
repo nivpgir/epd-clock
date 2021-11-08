@@ -1,0 +1,18 @@
+[package]
+name = "epd-clock"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+embedded-graphics = "0.7.1"
+# embedded-graphics-core = { version = "0.3.2", optional = true}
+epd-waveshare = { git = "https://github.com/caemor/epd-waveshare.git" }
+linux-embedded-hal = "0.3"
+embedded-hal-mock = "0.8"
+chrono = "0.4.19"
+rppal = { version = "0.13.1", features = ["hal", "hal-unproven" ] }
+
+[[bin]]
+name = "epd-clock"
