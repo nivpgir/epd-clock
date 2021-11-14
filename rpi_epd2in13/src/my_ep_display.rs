@@ -1,6 +1,6 @@
-
 use embedded_graphics::{
     mono_font::MonoTextStyleBuilder,
+    pixelcolor::BinaryColor,
     prelude::*,
     text::{Baseline, Text, TextStyleBuilder},
 };
@@ -18,14 +18,14 @@ use rppal::gpio;
 
 use chrono::Local;
 
-use crate::Result;
+use crate::{Result, analog_clock::AnalogClock};
 
 pub struct MyEPDisplay {
     pub spi: Spidev,
     pub delay: Delay,
     pub display: Display2in13,
-    pub epd: Epd2in13
-	<Spidev, gpio::OutputPin, gpio::InputPin, gpio::OutputPin, gpio::OutputPin, Delay>,
+    pub epd:
+        Epd2in13<Spidev, gpio::OutputPin, gpio::InputPin, gpio::OutputPin, gpio::OutputPin, Delay>,
 }
 
 impl MyEPDisplay {
@@ -39,10 +39,11 @@ impl MyEPDisplay {
 
         let epd = Epd2in13::new(&mut spi, cs, busy, dc, rst, &mut delay)?;
 
+        let display = Display2in13::default();
         return Ok(Self {
             spi,
             delay,
-            display: Display2in13::default(),
+            display: display,
             epd,
         });
     }
@@ -73,11 +74,11 @@ impl MyEPDisplay {
         rst.set_high();
         return Ok((cs, busy, dc, rst));
     }
-    pub fn set_rotation(self: &mut Self, rotation: DisplayRotation) -> &mut Self{
-	self.display.set_rotation(rotation);
-	self
+    pub fn set_rotation(self: &mut Self, rotation: DisplayRotation) -> &mut Self {
+        self.display.set_rotation(rotation);
+        self
     }
-    
+
     pub fn clear_screen(self: &mut Self) -> Result<&mut Self> {
         self.epd
             .set_refresh(&mut self.spi, &mut self.delay, RefreshLut::Full)
@@ -85,33 +86,53 @@ impl MyEPDisplay {
             .and_then(|_| self.epd.display_frame(&mut self.spi, &mut self.delay))?;
         Ok(self)
     }
+    pub fn flush(&mut self) -> Result<&mut Self>{
+	self.epd.update_and_display_frame(&mut self.spi, self.display.buffer(), &mut self.delay)?;
+	Ok(self)
 
-    pub fn draw_current_date_time(self: &mut Self) -> Result<&Self> {
-        let time_string = format!("{}", Local::now().format("%Y\n%a %e %b\n%T"));
-        self.draw_text(time_string.as_str(), 0, 40);
+    }
+    pub fn draw_current_date_time(self: &mut Self) -> Result<&mut Self> {
+        let time = Local::now();
+        // MyText { time }.draw(&mut self.display)?;
+	AnalogClock{ time }.draw(&mut self.display)?;
         self.epd
             .update_and_display_frame(&mut self.spi, self.display.buffer(), &mut self.delay)?;
         Ok(self)
     }
 
-    fn draw_text(self: &mut Self, text: &str, x: i32, y: i32) {
-        let style = MonoTextStyleBuilder::new()
-            // .font(&embedded_graphics::mono_font::ascii::FONT_6X10)
-            .font(&embedded_graphics::mono_font::ascii::FONT_10X20)
-            .text_color(White)
-            .background_color(Black)
-            .build();
-
-        let text_style = TextStyleBuilder::new().baseline(Baseline::Top).build();
-
-        let _ = Text::with_text_style(text, Point::new(x, y), style, text_style)
-            .draw(&mut self.display);
-    }
-
     pub fn set_refresh(self: &mut Self, refresh_type: RefreshLut) -> Result<&mut Self> {
-	self.epd.set_refresh(&mut self.spi, &mut self.delay, refresh_type)?;
-	Ok(self)
+        self.epd
+            .set_refresh(&mut self.spi, &mut self.delay, refresh_type)?;
+        Ok(self)
     }
 }
 
+struct MyText {
+    time: chrono::DateTime<Local>,
+}
 
+impl Drawable for MyText {
+    type Color = BinaryColor;
+
+    type Output = ();
+
+    fn draw<D>(&self, target: &mut D) -> std::result::Result<Self::Output, D::Error>
+    where
+        D: DrawTarget<Color = Self::Color>,
+    {
+        let style = MonoTextStyleBuilder::new()
+            .font(&embedded_graphics::mono_font::ascii::FONT_10X20)
+            .background_color(White)
+            .text_color(Black)
+            .build();
+
+        let start_pos = target.bounding_box().top_left;
+        let text_style = TextStyleBuilder::new().baseline(Baseline::Top).build();
+
+        // self.display.clear_buffer(Color::White);
+	let text = format!("{}", self.time.format("%Y\n%a %e %b\n%T"));
+        Text::with_text_style(&text, start_pos, style, text_style).draw(target)?;
+
+        Ok(())
+    }
+}

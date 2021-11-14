@@ -1,15 +1,22 @@
+
 [tasks.pi-test-run]
 dependencies = ["build", "pi-test-stop"]
 script_runner = "@duckscript"
 script = '''
-exec scp target/arm-unknown-linux-gnueabihf/debug/epd-clock pi@raspberrypi.local:/tmp/epd-clock
-spawn ssh pi@raspberrypi.local "chmod +x /tmp/epd-clock && /tmp/epd-clock"
-sleep 5000
+output = exec netsh interface ip show config name=rpi0
+exit_code = set ${output.code}
+if exit_code
+	output = exec scp target/arm-unknown-linux-gnueabihf/debug/epd-clock pi@raspberrypi.local:/tmp/epd-clock
+	pid = spawn ssh pi@raspberrypi.local "chmod +x /tmp/epd-clock && /tmp/epd-clock"
+	sleep 5000
+else
+	echo failed with exit code ${exit_code}
+end
 '''
 
 [tasks.pi-test-stop]
 script_runner = "@duckscript"
 script = '''
-echo stopping all epd-clock processes
-exec ssh pi@raspberrypi.local "pkill epd-clock"
+# echo stopping all epd-clock processes
+output = exec ssh pi@raspberrypi.local "pkill epd-clock"
 '''
