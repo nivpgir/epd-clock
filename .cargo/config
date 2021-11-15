@@ -1,4 +1,0 @@
-
-[build]
-# target = "arm-unknown-linux-gnueabihf"
-target = "x86_64-pc-windows-msvc"

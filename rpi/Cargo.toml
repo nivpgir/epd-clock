@@ -7,4 +7,8 @@ edition = "2021"
 
 [dependencies]
 rpi_epd2in13 = { path = "../rpi_epd2in13" }
-clocks = { path = "../clocks" }
+chrono = "0.4.19"
+epd-waveshare = { git = "https://github.com/caemor/epd-waveshare.git" }
+embedded-graphics = "0.7.1"
+app = { path = "../app" }
+# clocks = { path = "../clocks" }

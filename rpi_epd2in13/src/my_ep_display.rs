@@ -1,3 +1,4 @@
+
 use embedded_graphics::{
     mono_font::MonoTextStyleBuilder,
     pixelcolor::BinaryColor,
@@ -18,15 +19,17 @@ use rppal::gpio;
 
 use chrono::Local;
 
-use crate::{Result, analog_clock::AnalogClock};
+use crate::Result;
 
 pub struct MyEPDisplay {
     pub spi: Spidev,
     pub delay: Delay,
-    pub display: Display2in13,
+    // pub display: Display2in13,
     pub epd:
         Epd2in13<Spidev, gpio::OutputPin, gpio::InputPin, gpio::OutputPin, gpio::OutputPin, Delay>,
 }
+
+use app::MyScreen;
 
 impl MyEPDisplay {
     pub fn new() -> Result<Self> {
@@ -39,11 +42,11 @@ impl MyEPDisplay {
 
         let epd = Epd2in13::new(&mut spi, cs, busy, dc, rst, &mut delay)?;
 
-        let display = Display2in13::default();
+        // let display = Display2in13::default();
         return Ok(Self {
             spi,
             delay,
-            display: display,
+            // display: display,
             epd,
         });
     }
@@ -74,10 +77,10 @@ impl MyEPDisplay {
         rst.set_high();
         return Ok((cs, busy, dc, rst));
     }
-    pub fn set_rotation(self: &mut Self, rotation: DisplayRotation) -> &mut Self {
-        self.display.set_rotation(rotation);
-        self
-    }
+    // pub fn set_rotation(self: &mut Self, rotation: DisplayRotation) -> &mut Self {
+    //     self.display.set_rotation(rotation);
+    //     self
+    // }
 
     pub fn clear_screen(self: &mut Self) -> Result<&mut Self> {
         self.epd
@@ -86,19 +89,20 @@ impl MyEPDisplay {
             .and_then(|_| self.epd.display_frame(&mut self.spi, &mut self.delay))?;
         Ok(self)
     }
-    pub fn flush(&mut self) -> Result<&mut Self>{
-	self.epd.update_and_display_frame(&mut self.spi, self.display.buffer(), &mut self.delay)?;
-	Ok(self)
+    // pub fn flush(&mut self) -> Result<&mut Self>{
+    // 	self.epd.update_and_display_frame(&mut self.spi, self.display.buffer(), &mut self.delay)?;
+    // 	Ok(self)
 
-    }
-    pub fn draw_current_date_time(self: &mut Self) -> Result<&mut Self> {
-        let time = Local::now();
-        // MyText { time }.draw(&mut self.display)?;
-	AnalogClock{ time }.draw(&mut self.display)?;
-        self.epd
-            .update_and_display_frame(&mut self.spi, self.display.buffer(), &mut self.delay)?;
-        Ok(self)
-    }
+    // }
+
+    // pub fn draw_current_date_time(self: &mut Self) -> Result<&mut Self> {
+    //     let time = Local::now();
+    //     // MyText { time }.draw(&mut self.display)?;
+    // 	AnalogClock{ time }.draw(&mut self.display)?;
+    //     self.epd
+    //         .update_and_display_frame(&mut self.spi, self.display.buffer(), &mut self.delay)?;
+    //     Ok(self)
+    // }
 
     pub fn set_refresh(self: &mut Self, refresh_type: RefreshLut) -> Result<&mut Self> {
         self.epd
@@ -106,6 +110,31 @@ impl MyEPDisplay {
         Ok(self)
     }
 }
+
+impl MyScreen<Display2in13> for MyEPDisplay{
+    fn my_update(&mut self, display: &Display2in13){
+	self.epd
+	    .update_and_display_frame(&mut self.spi, display.buffer(), &mut self.delay)
+	    .unwrap();
+    }
+}
+
+
+// impl DrawTarget for MyEPDisplay{
+//     type Color = BinaryColor;
+//     type Error = Infallible;
+//     fn draw_iter<I>(&mut self, pixels: I) -> std::result::Result<(), Self::Error>
+//     where
+//         I: IntoIterator<Item = Pixel<Self::Color>> {
+// 	self.display.draw_iter(pixels)
+//     }
+// }
+
+// impl OriginDimensions for MyEPDisplay{
+//     fn size(&self) -> Size {
+// 	self.display.size()
+//     }
+// }
 
 struct MyText {
     time: chrono::DateTime<Local>,

@@ -15,38 +15,40 @@ pub trait Waker<T: ThreadSafe> = FnOnce(Sender<T>) -> Result<()> + ThreadSafe + 
 pub trait ThreadsafeError = std::error::Error + ThreadSafe;
 
 
-pub struct App<S, D>
+pub struct App<'a, S, D>
 where
-    S: MyScreen<D>,
-    D: DrawTarget,
+    // D: DrawTarget,
+    // S: DrawDateTime<D> + MyScreen<D>,
 {
-    pub screen: S,
-    pub display: D,
+    pub screen: &'a mut S,
+    pub display: &'a mut D,
     // waker: &'static W
 }
 
-impl<S, D> App<S, D>
+impl<'a, S, D> App<'a, S, D>
 where
-    S: MyScreen<D>,
+    // S: MyScreen<D>,
     D: DrawTarget,
+    S: MyScreen<D>,
 {
     pub fn main_loop<T: ThreadSafe>(
 	&mut self,
 	waker: &'static impl Waker<T>,
 	) -> Result<()>
-	where
-	D: DrawTarget<Color=BinaryColor>,
+    where
+	S: MyScreen<D>,
+    	D: DrawTarget<Color=BinaryColor>,
 	D::Error: ThreadsafeError {
-
-	    let (sender, receiver) = std::sync::mpsc::channel();
-	    loop {
-		spawn_waker_thread(&sender, waker);
-		let frame_data = receiver.recv()?;
-		self.display.draw_current_date_time(frame_data)?;
-		self.screen.my_update(&mut self.display);
-	    }
-
+	let (sender, receiver) = std::sync::mpsc::channel();
+	loop {
+	    spawn_waker_thread(&sender, waker);
+	    let frame_data = receiver.recv()?;
+	    self.display.draw_current_date_time(frame_data)?;
+	    // self.screen.my_update(&mut self.display);
+	    self.screen.my_update(self.display);
 	}
+
+    }
 
     }
 fn spawn_waker_thread<T: ThreadSafe>(sender: &Sender<T>, f: &'static impl Waker<T>) {
@@ -71,12 +73,12 @@ pub trait MyScreen<DT: DrawTarget>{
     fn my_update(&mut self, display: &DT) -> ();
 }
 
-pub trait DrawDateTime<D>{
+pub trait DrawDateTime{
     fn draw_current_date_time<FD: ThreadSafe>(&mut self, frame_data: FD)
 					      -> Result<&mut Self>;
 }
 
-impl <D> DrawDateTime<D> for D
+impl <D> DrawDateTime for D
 where
     D: DrawTarget<Color=BinaryColor>,
     D::Error: ThreadsafeError{

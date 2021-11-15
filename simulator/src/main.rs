@@ -18,9 +18,9 @@ use app::{
 fn main() -> Result<()> {
     let simulator = SimulatorDisplay::<BinaryColor>::new(Size::new(256, 256));
     let output_settings = OutputSettingsBuilder::new().scale(2).build();
-    let screen = Window::new("Clock", &output_settings);
-    let my_simulator = MySimulator{simulator};
-    App{screen, display: my_simulator}.main_loop(&waker)
+    let mut screen = Window::new("Clock", &output_settings);
+    let mut my_simulator = MySimulator{simulator};
+    App{screen: &mut screen, display: &mut my_simulator}.main_loop(&waker)
 }
 
 fn waker<>(sender: Sender<()>) -> Result<()> {
