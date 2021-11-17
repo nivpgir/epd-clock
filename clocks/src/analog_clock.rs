@@ -3,13 +3,18 @@ use chrono::{Local, Timelike};
 use core::f32::consts::PI;
 use embedded_graphics::{
     Drawable,
-    mono_font::{ascii::FONT_9X15, MonoTextStyle},
     pixelcolor::BinaryColor,
     prelude::*,
-    primitives::{Circle, Line, PrimitiveStyle, PrimitiveStyleBuilder, Rectangle},
-    text::Text,
-};
+    primitives::{
+	Circle,
+	Line,
+	PrimitiveStyle,
+	PrimitiveStyleBuilder,
+	Rectangle,
+	Sector
+    }};
 
+use embedded_graphics::geometry::AngleUnit;
 /// The margin between the clock face and the display border.
 const MARGIN: u32 = 10;
 
@@ -42,9 +47,9 @@ fn sexagesimal_to_angle(value: u32) -> f32 {
 }
 
 /// Creates a centered circle for the clock face.
-fn create_face(target: &impl DrawTarget) -> Circle {
+fn create_face(bounding_box: Rectangle) -> Circle {
     // The draw target bounding box can be used to determine the size of the display.
-    let bounding_box = target.bounding_box();
+    // let bounding_box = target.bounding_box();
     let diameter = bounding_box.size.width.min(bounding_box.size.height) - 2 * MARGIN;
 
     Circle::with_center(bounding_box.center(), diameter)
@@ -164,7 +169,7 @@ impl Drawable for AnalogClock{
     fn draw<D>(&self, display: &mut D) -> std::result::Result<Self::Output, D::Error>
     where
         D: DrawTarget<Color = Self::Color> {
-	let clock_face = create_face(display);
+	let clock_face = create_face(display.bounding_box());
 
 	// Calculate the position of the three clock hands in radians.
         let hours_radians = hour_to_angle(self.time.hour());
@@ -201,53 +206,65 @@ impl Drawable for AnalogClock{
     }
 }
 
-// fn main() -> Result<(), core::convert::Infallible> {
-//     // let mut display = SimulatorDisplay::<BinaryColor>::new(Size::new(256, 256));
+pub struct MyClock{
+    pub time: chrono::DateTime<Local>
+}
 
-//     // let output_settings = OutputSettingsBuilder::new().scale(2).build();
-//     // let mut window = Window::new("Clock", &output_settings);
+impl Drawable for MyClock{
+    type Color = BinaryColor;
 
-//     let clock_face = create_face(&display);
+    type Output = ();
 
-//     'running: loop {
-//         let time = Local::now();
+    fn draw<D>(&self, target: &mut D) -> Result<Self::Output, D::Error>
+    where
+        D: DrawTarget<Color = Self::Color> {
+	let face = create_face(target.bounding_box());
 
-//         // Calculate the position of the three clock hands in radians.
-//         let hours_radians = hour_to_angle(time.hour());
-//         let minutes_radians = sexagesimal_to_angle(time.minute());
-//         let seconds_radians = sexagesimal_to_angle(time.second());
+	let hours_angle = hour_to_angle(self.time.hour());
+        let minutes_angle = sexagesimal_to_angle(self.time.minute());
+        let seconds_angle = sexagesimal_to_angle(self.time.second());
 
-//         // NOTE: In no-std environments, consider using
-//         // [arrayvec](https://stackoverflow.com/a/39491059/383609) and a fixed size buffer
-//         let digital_clock_text = format!(
-//             "{:02}:{:02}:{:02}",
-//             time.hour(),
-//             time.minute(),
-//             time.second()
-//         );
+	let diameter = face.diameter as f32;
 
-//         display.clear(BinaryColor::Off)?;
+	let hours_inner = 1.0 / 4.0 as f32;
+	let hours_outer = 2.0 / 4.0 as f32;
+	let minutes_inner = 3.0 / 5.0 as f32;
+	let minutes_outer = 4.0 / 5.0 as f32;
+	let seconds_inner = 5.0 / 6.0 as f32;
+	let seconds_outer = 1.0 as f32;
 
-//         draw_face(&mut display, &clock_face)?;
-//         draw_hand(&mut display, &clock_face, hours_radians, -60)?;
-//         draw_hand(&mut display, &clock_face, minutes_radians, -30)?;
-//         draw_hand(&mut display, &clock_face, seconds_radians, 0)?;
-//         draw_second_decoration(&mut display, &clock_face, seconds_radians, -20)?;
+ 	let hours_inner =
+	    Circle::with_center(target.bounding_box().center(),
+				(diameter * hours_inner) as u32 + 2);
+	let hours_outer =
+	    Sector::with_center(target.bounding_box().center(),
+				(diameter * hours_outer) as u32,
+				90.0.deg(), -hours_angle.rad());
+	let minutes_inner =
+	    Circle::with_center(target.bounding_box().center(),
+				(diameter * minutes_inner) as u32 + 2);
+	let minutes_outer =
+	    Sector::with_center(target.bounding_box().center(),
+				(diameter * minutes_outer) as u32,
+				90.0.deg(), -minutes_angle.rad());
+	let seconds_inner =
+	    Circle::with_center(target.bounding_box().center(),
+				(diameter * seconds_inner) as u32 + 2);
+	let seconds_outer =
+	    Sector::with_center(target.bounding_box().center(),
+				(diameter * seconds_outer) as u32,
+				90.0.deg(), -seconds_angle.rad());
 
-//         // Draw digital clock just above center.
-//         draw_digital_clock(&mut display, &clock_face, &digital_clock_text)?;
 
-//         // Draw a small circle over the hands in the center of the clock face.
-//         // This has to happen after the hands are drawn so they're covered up.
-//         Circle::with_center(clock_face.center(), 9)
-//             .into_styled(PrimitiveStyle::with_fill(BinaryColor::On))
-//             .draw(&mut display)?;
+	seconds_outer.into_styled(PrimitiveStyle::with_fill(BinaryColor::On)).draw(target)?;
+	seconds_inner.into_styled(PrimitiveStyle::with_fill(BinaryColor::Off)).draw(target)?;
 
-//         window.update(&display);
+	minutes_outer.into_styled(PrimitiveStyle::with_fill(BinaryColor::On)).draw(target)?;
+	minutes_inner.into_styled(PrimitiveStyle::with_fill(BinaryColor::Off)).draw(target)?;
 
-//         if window.events().any(|e| e == SimulatorEvent::Quit) {
-//             break 'running Ok(());
-//         }
-//         thread::sleep(Duration::from_millis(50));
-//     }
-// }
+	hours_outer.into_styled(PrimitiveStyle::with_fill(BinaryColor::On)).draw(target)?;
+	hours_inner.into_styled(PrimitiveStyle::with_fill(BinaryColor::Off)).draw(target)?;
+
+	Ok(())
+    }
+}

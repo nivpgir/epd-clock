@@ -11,13 +11,6 @@ use chrono::Local;
 
 pub trait DrawDateTime{
     fn draw_current_date_time(self: &mut Self) -> Result<&mut Self>;
-    // fn draw_current_date_time(self: &mut Self) -> Result<&Self>{
-    // 	let time = Local::now();
-    //     // MyText { time }.draw(&mut self.display)?;
-    // 	AnalogClock{ time }.draw(&mut self.display)?;
-    //     Ok(self)
-
-    // }
 }
 
 pub trait GetDisplay{
@@ -30,7 +23,6 @@ where
     T: DrawTarget<Color=BinaryColor>, {
     fn draw_current_date_time(self: &mut Self) -> Result<&mut Self>{
 	let time = Local::now();
-        // MyText { time }.draw(&mut self.display)?;
 	AnalogClock{ time }.draw(self)?;
 	Ok(self)
     }

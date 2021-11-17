@@ -1,5 +1,6 @@
 use std::sync::mpsc::Sender;
 
+use app::ThreadSafe;
 use embedded_graphics_simulator::{
     OutputSettingsBuilder, SimulatorDisplay, Window,
 };
@@ -16,7 +17,8 @@ use app::{
 };
 
 fn main() -> Result<()> {
-    let simulator = SimulatorDisplay::<BinaryColor>::new(Size::new(256, 256));
+    // let simulator = SimulatorDisplay::<BinaryColor>::new(Size::new(256, 256));
+    let simulator = SimulatorDisplay::<BinaryColor>::new(Size::new(122, 250));
     let output_settings = OutputSettingsBuilder::new().scale(2).build();
     let mut screen = Window::new("Clock", &output_settings);
     let mut my_simulator = MySimulator{simulator};
@@ -54,7 +56,7 @@ impl OriginDimensions for MySimulator{
 }
 
 impl MyScreen<MySimulator> for Window{
-    fn my_update(&mut self, display: &MySimulator){
+    fn my_update<UI: ThreadSafe>(&mut self, display: &MySimulator, _update_info: &UI){
 	self.update(&display.simulator)
     }
 }

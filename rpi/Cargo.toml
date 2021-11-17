@@ -6,8 +6,10 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-rpi_epd2in13 = { path = "../rpi_epd2in13" }
+# rpi_epd2in13 = { path = "../rpi_epd2in13" }
 chrono = "0.4.19"
+linux-embedded-hal = "0.3"
+rppal = { version = "0.13.1", features = ["hal", "hal-unproven" ] }
 epd-waveshare = { git = "https://github.com/caemor/epd-waveshare.git" }
 embedded-graphics = "0.7.1"
 app = { path = "../app" }
